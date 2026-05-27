@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ganga Watch AI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg:      #f0f6ff;
+    --bg2:     #e3eeff;
+    --card:    #ffffff;
+    --border:  #c2d6f5;
+    --blue:    #1a6fff;
+    --blue2:   #0047cc;
+    --lblue:   #5b9bff;
+    --sky:     #e8f2ff;
+    --green:   #00b86b;
+    --amber:   #f5a623;
+    --red:     #e03e3e;
+    --purple:  #7c5cbf;
+    --text:    #0d2a5e;
+    --dim:     #6b8cbf;
+    --white:   #ffffff;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(26,111,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,111,255,0.04) 1px, transparent 1px);
+    background-size: 36px 36px;
+    pointer-events:none; z-index:0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative; z-index:10;
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, #0047cc, #1a6fff);
+    box-shadow: 0 2px 16px rgba(26,111,255,0.18);
+  }
+  .logo { display:flex; align-items:center; gap:14px; }
+  .logo-icon {
+    width:44px; height:44px;
+    background: rgba(255,255,255,0.18);
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+    border: 1.5px solid rgba(255,255,255,0.3);
+  }
+  .logo-text h1 {
+    font-size:1.3rem; font-weight:700; color:#fff;
+    letter-spacing:1.5px;
+  }
+  .logo-text p {
+    font-size:0.7rem; color:rgba(255,255,255,0.7);
+    letter-spacing:2px; text-transform:uppercase;
+  }
+  .header-right { display:flex; align-items:center; gap:20px; }
+  .live-badge {
+    display:flex; align-items:center; gap:7px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius:20px; padding:5px 16px;
+    font-size:0.78rem; font-weight:700;
+    color:#fff; letter-spacing:2px;
+  }
+  .live-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:#7fff6e;
+    animation: pulse-g 1.2s infinite;
+  }
+  @keyframes pulse-g {
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:0.4; transform:scale(0.7); }
+  }
+  .clock {
+    font-family:'Space Mono', monospace;
+    font-size:0.85rem; color:rgba(255,255,255,0.85);
+  }
+
+  /* ── LAYOUT ── */
+  main {
+    position:relative; z-index:1;
+    padding: 24px 32px;
+    display:flex; flex-direction:column; gap:22px;
+  }
+
+  /* ── STATION BAR ── */
+  .station-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .station-bar label { font-size:0.78rem; color:var(--dim); letter-spacing:2px; text-transform:uppercase; font-weight:600; }
+  .station-btn {
+    padding:7px 18px;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius:8px;
+    color:var(--dim); font-family:'Inter',sans-serif;
+    font-size:0.82rem; font-weight:600; cursor:pointer;
+    transition: all 0.2s;
+    box-shadow: 0 1px 4px rgba(26,111,255,0.06);
+  }
+  .station-btn:hover { border-color:var(--blue); color:var(--blue); }
+  .station-btn.active {
+    background: var(--blue);
+    border-color:var(--blue); color:#fff;
+    box-shadow: 0 2px 10px rgba(26,111,255,0.25);
+  }
+
+  /* ── KPI CARDS ── */
+  .kpi-grid {
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap:14px;
+  }
+  @media(max-width:1200px){ .kpi-grid{ grid-template-columns: repeat(4,1fr); } }
+  @media(max-width:700px){  .kpi-grid{ grid-template-columns: repeat(2,1fr); } }
+
+  .kpi-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius:14px; padding:16px;
+    position:relative; overflow:hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(26,111,255,0.06);
+  }
+  .kpi-card:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(26,111,255,0.14); }
+  .kpi-card::after {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background: var(--accent, var(--blue));
+    border-radius:14px 14px 0 0;
+  }
+  .kpi-label { font-size:0.68rem; letter-spacing:2px; text-transform:uppercase; color:var(--dim); margin-bottom:8px; font-weight:600; }
+  .kpi-value { font-family:'Space Mono',monospace; font-size:1.6rem; font-weight:700; color:var(--text); line-height:1; }
+  .kpi-unit { font-size:0.72rem; color:var(--dim); margin-top:4px; }
+  .kpi-delta {
+    position:absolute; top:14px; right:12px;
+    font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:20px;
+  }
+  .delta-up   { background:rgba(0,184,107,0.1); color:var(--green); }
+  .delta-down { background:rgba(224,62,62,0.1); color:var(--red); }
+
+  /* ── CHARTS ROW ── */
+  .charts-row { display:grid; grid-template-columns: 2fr 1fr; gap:20px; }
+  @media(max-width:900px){ .charts-row{ grid-template-columns:1fr; } }
+
+  /* ── CHART CARD ── */
+  .chart-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius:16px; padding:22px;
+    box-shadow: 0 2px 10px rgba(26,111,255,0.06);
+  }
+  .chart-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .chart-title { font-size:0.78rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); font-weight:600; }
+  .chart-badge {
+    font-size:0.68rem; padding:3px 12px; border-radius:20px;
+    background:rgba(26,111,255,0.08); border:1px solid rgba(26,111,255,0.2);
+    color:var(--blue); letter-spacing:1px; font-weight:600;
+  }
+  .chart-wrap { position:relative; height:220px; }
+
+  /* ── MODEL METRICS ── */
+  .metrics-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .metric-row {
+    background: var(--sky);
+    border:1.5px solid var(--border); border-radius:10px; padding:14px 16px;
+  }
+  .metric-model { font-size:0.7rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; font-weight:700; }
+  .metric-bars { display:flex; flex-direction:column; gap:6px; }
+  .mbar-row { display:flex; align-items:center; gap:8px; }
+  .mbar-label { width:50px; font-size:0.68rem; color:var(--dim); text-align:right; font-weight:600; }
+  .mbar-track { flex:1; height:5px; background:rgba(26,111,255,0.1); border-radius:3px; overflow:hidden; }
+  .mbar-fill { height:100%; border-radius:3px; transition: width 1s ease; }
+  .mbar-val { width:44px; font-family:'Space Mono',monospace; font-size:0.66rem; color:var(--text); text-align:right; }
+
+  /* ── BOTTOM ROW ── */
+  .bottom-row { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px; }
+  @media(max-width:1000px){ .bottom-row{ grid-template-columns:1fr; } }
+
+  /* ── GAUGE ── */
+  .gauge-wrap { display:flex; flex-direction:column; align-items:center; padding:10px 0; }
+  .gauge-svg { width:180px; height:100px; }
+  .gauge-value { font-family:'Space Mono',monospace; font-size:2.2rem; font-weight:700; color:var(--text); margin-top:8px; }
+  .gauge-label { font-size:0.72rem; letter-spacing:2px; color:var(--dim); text-transform:uppercase; }
+  .gauge-status { margin-top:8px; padding:4px 18px; border-radius:20px; font-size:0.8rem; font-weight:700; letter-spacing:1px; }
+
+  /* ── ALERTS ── */
+  .alert-list { display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; }
+  .alert-item {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 12px; border-radius:8px;
+    border-left:3px solid;
+    font-size:0.82rem;
+    animation: slideIn 0.4s ease;
+  }
+  @keyframes slideIn { from{ opacity:0; transform:translateX(-8px); } to{ opacity:1; transform:translateX(0); } }
+  .alert-item.warn  { border-color:var(--amber); background:rgba(245,166,35,0.07); }
+  .alert-item.good  { border-color:var(--green); background:rgba(0,184,107,0.07); }
+  .alert-item.crit  { border-color:var(--red);   background:rgba(224,62,62,0.07); }
+  .alert-icon { font-size:1rem; margin-top:1px; }
+  .alert-time { font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--dim); margin-top:3px; }
+
+  /* ── FORECAST TABLE ── */
+  .forecast-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+  .forecast-table th {
+    text-align:left; padding:7px 10px;
+    font-size:0.66rem; letter-spacing:2px; text-transform:uppercase;
+    color:var(--dim); border-bottom:1.5px solid var(--border); font-weight:600;
+  }
+  .forecast-table td { padding:8px 10px; border-bottom:1px solid var(--bg2); }
+  .forecast-table tr:last-child td { border-bottom:none; }
+  .forecast-table tr:hover td { background:var(--sky); }
+  .wqi-pill {
+    display:inline-block; padding:2px 10px; border-radius:20px;
+    font-family:'Space Mono',monospace; font-size:0.7rem; font-weight:700;
+  }
+
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg2); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌊</div>
+    <div class="logo-text">
+      <h1>Ganga Watch AI</h1>
+      <p>Real-Time River Intelligence Platform</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<main>
+
+  <div class="station-bar">
+    <label>Station :</label>
+    <button class="station-btn active" onclick="selectStation(this,'Haridwar')">Haridwar</button>
+    <button class="station-btn" onclick="selectStation(this,'Kanpur')">Kanpur</button>
+    <button class="station-btn" onclick="selectStation(this,'Allahabad')">Allahabad</button>
+    <button class="station-btn" onclick="selectStation(this,'Varanasi')">Varanasi</button>
+    <button class="station-btn" onclick="selectStation(this,'Patna')">Patna</button>
+    <button class="station-btn" onclick="selectStation(this,'Kolkata')">Kolkata</button>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card" style="--accent:#1a6fff">
+      <div class="kpi-label">WQI</div>
+      <div class="kpi-value" id="kpi-wqi">--</div>
+      <div class="kpi-unit">Water Quality Index</div>
+      <div class="kpi-delta delta-up" id="d-wqi">+0.0</div>
+    </div>
+    <div class="kpi-card" style="--accent:#00aaff">
+      <div class="kpi-label">DO</div>
+      <div class="kpi-value" id="kpi-do">--</div>
+      <div class="kpi-unit">mg/L</div>
+      <div class="kpi-delta delta-up" id="d-do">+0.0</div>
+    </div>
+    <div class="kpi-card" style="--accent:#00b86b">
+      <div class="kpi-label">pH</div>
+      <div class="kpi-value" id="kpi-ph">--</div>
+      <div class="kpi-unit">Acidity</div>
+      <div class="kpi-delta delta-up" id="d-ph">+0.0</div>
+    </div>
+    <div class="kpi-card" style="--accent:#f5a623">
+      <div class="kpi-label">BOD</div>
+      <div class="kpi-value" id="kpi-bod">--</div>
+      <div class="kpi-unit">mg/L</div>
+      <div class="kpi-delta delta-down" id="d-bod">-0.0</div>
+    </div>
+    <div class="kpi-card" style="--accent:#5b9bff">
+      <div class="kpi-label">Turbidity</div>
+      <div class="kpi-value" id="kpi-tur">--</div>
+      <div class="kpi-unit">NTU</div>
+      <div class="kpi-delta delta-down" id="d-tur">-0.0</div>
+    </div>
+    <div class="kpi-card" style="--accent:#e03e3e">
+      <div class="kpi-label">Temp</div>
+      <div class="kpi-value" id="kpi-tmp">--</div>
+      <div class="kpi-unit">°C</div>
+      <div class="kpi-delta delta-up" id="d-tmp">+0.0</div>
+    </div>
+    <div class="kpi-card" style="--accent:#7c5cbf">
+      <div class="kpi-label">Conductivity</div>
+      <div class="kpi-value" id="kpi-cond">--</div>
+      <div class="kpi-unit">µS/cm</div>
+      <div class="kpi-delta delta-up" id="d-cond">+0.0</div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">WQI — Live Trend (Last 30 readings)</span>
+        <span class="chart-badge">TRANSFORMER</span>
+      </div>
+      <div class="chart-wrap"><canvas id="wqiChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Parameter Radar</span>
+        <span class="chart-badge">CURRENT</span>
+      </div>
+      <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Model Performance Metrics</span>
+      </div>
+      <div class="metrics-grid" id="metricsGrid"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">WQI Gauge + 7-Day Forecast</span>
+      </div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 200 110">
+          <path d="M20,100 A80,80 0 0,1 180,100" fill="none" stroke="#dde8ff" stroke-width="14" stroke-linecap="round"/>
+          <path d="M20,100 A80,80 0 0,1 180,100" fill="none" stroke="url(#gaugeGrad)" stroke-width="14"
+                stroke-linecap="round" stroke-dasharray="251" id="gaugePath" stroke-dashoffset="251"/>
+          <defs>
+            <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#e03e3e"/>
+              <stop offset="40%"  stop-color="#f5a623"/>
+              <stop offset="100%" stop-color="#00b86b"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="gauge-value" id="gaugeVal">--</div>
+        <div class="gauge-label">Water Quality Index</div>
+        <div class="gauge-status" id="gaugeStatus">--</div>
+      </div>
+      <table class="forecast-table" style="margin-top:12px">
+        <thead><tr><th>Day</th><th>Date</th><th>WQI</th><th>Status</th></tr></thead>
+        <tbody id="forecastBody"></tbody>
+      </table>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Live Alerts</span>
+        <span class="chart-badge" id="alertCount">0 ALERTS</span>
+      </div>
+      <div class="alert-list" id="alertList"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const STATIONS = {
+  Haridwar:   { wqiBase:72, doBase:8.2, phBase:7.9, bodBase:2.1, turBase:12, tmpBase:18, condBase:320 },
+  Kanpur:     { wqiBase:41, doBase:4.8, phBase:7.4, bodBase:8.5, turBase:45, tmpBase:24, condBase:580 },
+  Allahabad:  { wqiBase:55, doBase:6.1, phBase:7.6, bodBase:5.2, turBase:28, tmpBase:26, condBase:440 },
+  Varanasi:   { wqiBase:48, doBase:5.4, phBase:7.5, bodBase:6.8, turBase:36, tmpBase:27, condBase:510 },
+  Patna:      { wqiBase:52, doBase:5.8, phBase:7.6, bodBase:5.8, turBase:32, tmpBase:28, condBase:470 },
+  Kolkata:    { wqiBase:38, doBase:4.2, phBase:7.3, bodBase:9.8, turBase:58, tmpBase:30, condBase:620 },
+};
+
+const MODELS = [
+  { name:"LSTM",        color:"#1a6fff", rmse:2.14, mse:4.58, mae:1.72, mape:3.21, r2:0.9612 },
+  { name:"GRU",         color:"#00aaff", rmse:2.08, mse:4.33, mae:1.68, mape:3.08, r2:0.9634 },
+  { name:"BiLSTM",      color:"#5b9bff", rmse:1.96, mse:3.84, mae:1.54, mape:2.87, r2:0.9671 },
+  { name:"TCN",         color:"#7c5cbf", rmse:1.88, mse:3.53, mae:1.48, mape:2.74, r2:0.9698 },
+  { name:"Transformer", color:"#00b86b", rmse:1.79, mse:3.20, mae:1.41, mape:2.58, r2:0.9724 },
+];
+
+let currentStation = "Haridwar";
+let prev = {};
+let wqiHistory = [];
+const MAX_HIST = 30;
+let alertLog = [];
+
+function noise(amp){ return (Math.random()-0.5)*2*amp; }
+
+function getReading(station){
+  const b = STATIONS[station];
+  return {
+    wqi:  Math.max(0,  Math.min(100, b.wqiBase  + noise(4))),
+    do:   Math.max(0,  Math.min(14,  b.doBase   + noise(0.5))),
+    ph:   Math.max(6,  Math.min(9,   b.phBase   + noise(0.15))),
+    bod:  Math.max(0,                b.bodBase  + noise(1)),
+    tur:  Math.max(0,                b.turBase  + noise(6)),
+    tmp:  Math.max(0,                b.tmpBase  + noise(1)),
+    cond: Math.max(0,                b.condBase + noise(20)),
+  };
+}
+
+function updateClock(){
+  document.getElementById("clock").textContent = new Date().toLocaleTimeString();
+}
+setInterval(updateClock, 1000); updateClock();
+
+function selectStation(btn, name){
+  document.querySelectorAll(".station-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  currentStation = name;
+  wqiHistory = [];
+  alertLog = [];
+  document.getElementById("alertList").innerHTML = "";
+  tick();
+}
+
+function updateKPI(reading){
+  const set = (id, val, p, did) => {
+    document.getElementById(id).textContent = val.toFixed(1);
+    const delta = val - (p||val);
+    const el = document.getElementById(did);
+    el.textContent = (delta>=0?"+":"")+delta.toFixed(1);
+    el.className = "kpi-delta " + (delta>=0?"delta-up":"delta-down");
+  };
+  set("kpi-wqi", reading.wqi,  prev.wqi,  "d-wqi");
+  set("kpi-do",  reading.do,   prev.do,   "d-do");
+  set("kpi-ph",  reading.ph,   prev.ph,   "d-ph");
+  set("kpi-bod", reading.bod,  prev.bod,  "d-bod");
+  set("kpi-tur", reading.tur,  prev.tur,  "d-tur");
+  set("kpi-tmp", reading.tmp,  prev.tmp,  "d-tmp");
+  set("kpi-cond",reading.cond, prev.cond, "d-cond");
+}
+
+function updateGauge(wqi){
+  const offset = 251 - (wqi/100)*251;
+  document.getElementById("gaugePath").style.strokeDashoffset = offset;
+  document.getElementById("gaugeVal").textContent = wqi.toFixed(1);
+  const s = document.getElementById("gaugeStatus");
+  if(wqi>=70){ s.textContent="GOOD"; s.style.cssText="background:rgba(0,184,107,0.12);color:#00b86b;border-radius:20px"; }
+  else if(wqi>=50){ s.textContent="MODERATE"; s.style.cssText="background:rgba(245,166,35,0.12);color:#f5a623;border-radius:20px"; }
+  else if(wqi>=30){ s.textContent="POOR"; s.style.cssText="background:rgba(255,109,0,0.12);color:#ff6d00;border-radius:20px"; }
+  else { s.textContent="CRITICAL"; s.style.cssText="background:rgba(224,62,62,0.12);color:#e03e3e;border-radius:20px"; }
+}
+
+function updateForecast(wqi){
+  const body = document.getElementById("forecastBody");
+  const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const now = new Date();
+  body.innerHTML = days.map((d,i)=>{
+    const dt = new Date(now); dt.setDate(dt.getDate()+i+1);
+    const fwqi = Math.max(0,Math.min(100, wqi + noise(6) + (i*0.3)));
+    let col="#f5a623", label="Moderate";
+    if(fwqi>=70){col="#00b86b";label="Good";}
+    else if(fwqi<30){col="#e03e3e";label="Critical";}
+    const dateStr = dt.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
+    return `<tr>
+      <td style="color:var(--dim);font-weight:600">${d}</td>
+      <td style="color:var(--text)">${dateStr}</td>
+      <td><span class="wqi-pill" style="background:${col}18;color:${col}">${fwqi.toFixed(1)}</span></td>
+      <td style="color:${col};font-size:0.75rem;font-weight:600">${label}</td>
+    </tr>`;
+  }).join("");
+}
+
+function checkAlerts(r){
+  const alerts = [];
+  if(r.do < 5)  alerts.push({type:"crit", icon:"🚨", msg:`Low DO: ${r.do.toFixed(2)} mg/L at ${currentStation}`});
+  if(r.bod > 7) alerts.push({type:"warn", icon:"⚠️", msg:`High BOD: ${r.bod.toFixed(2)} mg/L at ${currentStation}`});
+  if(r.wqi < 40) alerts.push({type:"crit", icon:"🚨", msg:`WQI Critical: ${r.wqi.toFixed(1)} at ${currentStation}`});
+  if(r.ph < 6.5 || r.ph > 8.5) alerts.push({type:"warn", icon:"⚠️", msg:`pH out of range: ${r.ph.toFixed(2)}`});
+  if(r.wqi > 70) alerts.push({type:"good", icon:"✅", msg:`Good water quality at ${currentStation}: ${r.wqi.toFixed(1)}`});
+
+  const list = document.getElementById("alertList");
+  const now = new Date().toLocaleTimeString();
+  alerts.forEach(a=>{ alertLog.unshift({...a, time:now}); if(alertLog.length>20) alertLog.pop(); });
+  document.getElementById("alertCount").textContent = alertLog.length + " ALERTS";
+  list.innerHTML = alertLog.slice(0,10).map(a=>`
+    <div class="alert-item ${a.type}">
+      <span class="alert-icon">${a.icon}</span>
+      <div><div style="color:var(--text)">${a.msg}</div><div class="alert-time">${a.time}</div></div>
+    </div>`).join("");
+}
+
+// ── WQI LINE CHART ─────────────────────────────────────────────────────────
+const wqiCtx = document.getElementById("wqiChart").getContext("2d");
+const wqiChart = new Chart(wqiCtx, {
+  type:"line",
+  data:{
+    labels:[],
+    datasets:[
+      { label:"Actual", data:[], borderColor:"#1a6fff", borderWidth:2,
+        backgroundColor:"rgba(26,111,255,0.07)", pointRadius:0, fill:true, tension:0.4 },
+      { label:"AI Forecast", data:[], borderColor:"#00b86b", borderWidth:2,
+        borderDash:[5,3], pointRadius:0, fill:false, tension:0.4 },
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    animation:{ duration:300 },
+    plugins:{ legend:{ labels:{ color:"#6b8cbf", font:{size:11} } } },
+    scales:{
+      x:{ ticks:{ color:"#6b8cbf", maxTicksLimit:8, font:{size:10} }, grid:{ color:"rgba(194,214,245,0.5)" } },
+      y:{ ticks:{ color:"#6b8cbf", font:{size:10} }, grid:{ color:"rgba(194,214,245,0.5)" }, min:0, max:100 }
+    }
+  }
+});
+
+// ── RADAR CHART ────────────────────────────────────────────────────────────
+const radCtx = document.getElementById("radarChart").getContext("2d");
+const radarChart = new Chart(radCtx, {
+  type:"radar",
+  data:{
+    labels:["DO","pH","BOD (inv)","Turbidity (inv)","Temp","Cond (inv)"],
+    datasets:[{
+      label:"Current",
+      data:[0,0,0,0,0,0],
+      borderColor:"#1a6fff", backgroundColor:"rgba(26,111,255,0.1)",
+      pointBackgroundColor:"#1a6fff", borderWidth:2, pointRadius:3
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    animation:{ duration:400 },
+    plugins:{ legend:{ labels:{ color:"#6b8cbf", font:{size:10} } } },
+    scales:{
+      r:{
+        ticks:{ color:"#6b8cbf", font:{size:9}, backdropColor:"transparent" },
+        grid:{ color:"rgba(194,214,245,0.6)" },
+        pointLabels:{ color:"#6b8cbf", font:{size:9} },
+        min:0, max:100
+      }
+    }
+  }
+});
+
+function updateRadar(r){
+  radarChart.data.datasets[0].data = [
+    (r.do/14)*100,
+    ((r.ph-6)/3)*100,
+    Math.max(0,100-(r.bod/15)*100),
+    Math.max(0,100-(r.tur/100)*100),
+    Math.max(0,100-(Math.abs(r.tmp-22)/15)*100),
+    Math.max(0,100-(r.cond/800)*100),
+  ];
+  radarChart.update();
+}
+
+function buildMetricsGrid(){
+  const grid = document.getElementById("metricsGrid");
+  grid.innerHTML = MODELS.map(m=>`
+    <div class="metric-row">
+      <div class="metric-model" style="color:${m.color}">${m.name}</div>
+      <div class="metric-bars">
+        ${mb("RMSE", m.rmse, 5,  m.color)}
+        ${mb("MAE",  m.mae,  5,  m.color)}
+        ${mb("R²",   m.r2,   1,  m.color)}
+        ${mb("MAPE", m.mape, 10, m.color)}
+      </div>
+    </div>`).join("");
+}
+function mb(label, val, max, color){
+  const pct = Math.min(100,(val/max)*100);
+  return `<div class="mbar-row">
+    <div class="mbar-label">${label}</div>
+    <div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${color}"></div></div>
+    <div class="mbar-val">${val}</div>
+  </div>`;
+}
+
+function tick(){
+  const r = getReading(currentStation);
+  wqiHistory.push(r.wqi);
+  if(wqiHistory.length > MAX_HIST) wqiHistory.shift();
+  const forecast = wqiHistory.map(v => Math.max(0,Math.min(100,v+noise(2))));
+  const labels = wqiHistory.map((_,i)=>`T-${wqiHistory.length-1-i}`).reverse();
+  wqiChart.data.labels = labels;
+  wqiChart.data.datasets[0].data = [...wqiHistory];
+  wqiChart.data.datasets[1].data = [...forecast];
+  wqiChart.update();
+  updateKPI(r);
+  updateGauge(r.wqi);
+  updateRadar(r);
+  updateForecast(r.wqi);
+  checkAlerts(r);
+  prev = {...r};
+}
+
+buildMetricsGrid();
+tick();
+setInterval(tick, 3000);
+</script>
+</body>
+</html>

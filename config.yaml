@@ -1,0 +1,20 @@
+api:
+  key: "YOUR_DATA_GOV_IN_API_KEY_HERE"
+  resource_id: "YOUR_RESOURCE_ID_HERE"
+  base_url: "https://api.data.gov.in/resource"
+
+model:
+  target_col: "WQI"
+  seq_len: 30
+  test_ratio: 0.2
+
+training:
+  epochs: 60
+  batch_size: 32
+  patience: 10
+
+paths:
+  raw_data: "data/processed_data.csv"
+  scaler: "data/scaler.pkl"
+  saved_models: "saved_models/"
+  results: "results/"
